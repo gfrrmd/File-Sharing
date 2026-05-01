@@ -1,7 +1,6 @@
 import os
 import random
 import string
-import traceback
 
 from pyrogram import Client, filters
 from pyrogram.types import (
@@ -10,9 +9,9 @@ from pyrogram.types import (
 )
 from pyrogram.errors import UserNotParticipant
 
-# ==========================================
+# ===================================
 # ENV
-# ==========================================
+# ===================================
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
@@ -20,45 +19,36 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
-# CHANNEL CLOUD / DATABASE
 DB_CHANNEL = int(os.getenv("DB_CHANNEL"))
 
-# FORCE SUB CHANNEL URL
-# contoh:
-# https://t.me/channelku
+# PRIVATE FSUB CHANNEL ID
+FSUB_CHANNEL = int(os.getenv("FSUB_CHANNEL"))
+
+# PRIVATE INVITE LINK
 CHANNEL_URL = os.getenv("CHANNEL_URL")
 
-# ambil username channel
-CHANNEL_USERNAME = CHANNEL_URL.replace(
-    "https://t.me/",
-    ""
-)
-
-# ==========================================
+# ===================================
 # CLIENT
-# ==========================================
+# ===================================
 
 app = Client(
-    "file-share-bot",
+    "bot",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN
 )
 
-# ==========================================
+# ===================================
 # TEMP DATABASE
-# WARNING:
-# restart railway = hilang
-# nanti upgrade pake mongodb
-# ==========================================
+# ===================================
 
 db = {}
 
-# ==========================================
+# ===================================
 # RANDOM CODE
-# ==========================================
+# ===================================
 
-def generate_code(length=12):
+def generate_code(length=10):
 
     return ''.join(
         random.choices(
@@ -67,20 +57,24 @@ def generate_code(length=12):
         )
     )
 
-# ==========================================
+# ===================================
 # FORCE SUB CHECK
-# ==========================================
+# ===================================
 
 async def check_force_sub(client, user_id):
 
     try:
 
-        await client.get_chat_member(
-            CHANNEL_USERNAME,
+        member = await client.get_chat_member(
+            FSUB_CHANNEL,
             user_id
         )
 
-        return True
+        # member valid
+        if member:
+            return True
+
+        return False
 
     except UserNotParticipant:
 
@@ -90,175 +84,134 @@ async def check_force_sub(client, user_id):
 
         return False
 
-# ==========================================
-# START COMMAND
-# ==========================================
+# ===================================
+# START
+# ===================================
 
 @app.on_message(filters.command("start"))
-async def start_command(client, message):
+async def start(client, message):
+
+    args = message.text.split()
+
+    # ===============================
+    # START BIASA
+    # ===============================
+
+    if len(args) == 1:
+
+        if message.from_user.id == ADMIN_ID:
+
+            await message.reply_text(
+                "Admin aktif.\n\nUpload media sekarang."
+            )
+
+        else:
+
+            await message.reply_text(
+                "Bot file sharing aktif."
+            )
+
+        return
+
+    # ===============================
+    # GET CODE
+    # ===============================
+
+    code = args[1]
+
+    # invalid
+    if code not in db:
+
+        await message.reply_text(
+            "Link invalid."
+        )
+
+        return
+
+    # cek force sub
+    joined = await check_force_sub(
+        client,
+        message.from_user.id
+    )
+
+    # belum join
+    if not joined:
+
+        buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "Join Channel",
+                    url=CHANNEL_URL
+                )
+            ]
+        ])
+
+        await message.reply_text(
+            "Join channel dulu jir.",
+            reply_markup=buttons
+        )
+
+        return
+
+    # ambil message id
+    msg_id = db[code]
+
+    # kirim media private
+    await client.copy_message(
+        chat_id=message.chat.id,
+        from_chat_id=DB_CHANNEL,
+        message_id=msg_id,
+        protect_content=True
+    )
+
+# ===================================
+# HANDLE PRIVATE MESSAGE
+# ===================================
+
+@app.on_message(filters.private)
+async def private_handler(client, message):
+
+    # admin only
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    # wajib media
+    if not message.media:
+        return
 
     try:
 
-        args = message.text.split()
-
-        # ==================================
-        # ADMIN START
-        # ==================================
-
-        if len(args) == 1 and message.from_user.id == ADMIN_ID:
-
-            await message.reply_text(
-                text=(
-                    "Admin mode aktif.\n\n"
-                    "Upload media buat generate link."
-                )
-            )
-
-            return
-
-        # ==================================
-        # USER START
-        # ==================================
-
-        if len(args) == 1:
-
-            await message.reply_text(
-                text=(
-                    "Bot file sharing aktif.\n\n"
-                    "Klik link dari admin buat ambil file."
-                )
-            )
-
-            return
-
-        # ==================================
-        # GET FILE
-        # ==================================
-
-        code = args[1]
-
-        # code invalid
-        if code not in db:
-
-            await message.reply_text(
-                "Link invalid jir."
-            )
-
-            return
-
-        # cek join channel
-        joined = await check_force_sub(
-            client,
-            message.from_user.id
+        # copy ke cloud
+        copied = await message.copy(
+            DB_CHANNEL
         )
 
-        # belum join
-        if not joined:
+        # message id cloud
+        msg_id = copied.id
 
-            buttons = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "Join Channel",
-                        url=CHANNEL_URL
-                    )
-                ]
-            ])
-
-            await message.reply_text(
-                text=(
-                    "Join channel dulu baru akses file."
-                ),
-                reply_markup=buttons
-            )
-
-            return
-
-        # ambil message id dari db
-        msg_id = db[code]
-
-        # kirim media
-        # protect_content=True
-        # supaya gabisa forward/screenshot
-        await client.copy_message(
-            chat_id=message.chat.id,
-            from_chat_id=DB_CHANNEL,
-            message_id=msg_id,
-            protect_content=True
-        )
-
-    except Exception as e:
-
-        print("START ERROR")
-        print(str(e))
-        print(traceback.format_exc())
-
-# ==========================================
-# UPLOAD MEDIA
-# ==========================================
-
-@app.on_message(filters.private & filters.media)
-async def upload_handler(client, message):
-
-    try:
-
-        user_id = message.from_user.id
-
-        # ==================================
-        # NON ADMIN BLOCK
-        # ==================================
-
-        if user_id != ADMIN_ID:
-
-            await message.reply_text(
-                "Lu bukan admin jir."
-            )
-
-            return
-
-        # ==================================
-        # FORWARD KE CLOUD
-        # lebih cepat dibanding copy
-        # ==================================
-
-        forwarded = await client.forward_messages(
-            chat_id=DB_CHANNEL,
-            from_chat_id=message.chat.id,
-            message_ids=message.id
-        )
-
-        # ambil message id cloud
-        msg_id = forwarded.id
-
-        # generate random code
+        # random code
         code = generate_code()
 
-        # simpan ke database sementara
+        # save
         db[code] = msg_id
 
-        # ambil username bot
+        # username bot
         me = await client.get_me()
 
         # generate link
         link = f"https://t.me/{me.username}?start={code}"
 
-        # kirim link ke admin
+        # kirim hasil
         await message.reply_text(
-            text=(
-                "Link generated:\n\n"
-                f"{link}"
-            ),
+            f"Link generated:\n\n{link}",
             disable_web_page_preview=True
         )
 
     except Exception as e:
 
-        print("UPLOAD ERROR")
-        print(str(e))
-        print(traceback.format_exc())
-
-# ==========================================
-# RUN BOT
-# ==========================================
+        await message.reply_text(
+            f"Error:\n{e}"
+        )
 
 print("BOT RUNNING...")
 app.run()
