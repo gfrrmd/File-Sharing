@@ -1,107 +1,113 @@
 import os
-import base64
-import logging
-import secrets
+import random
 import string
-from telethon import TelegramClient, events, Button
-from telethon.tl.functions.channels import GetParticipantRequest
-from telethon.errors import UserNotParticipantError
-from telethon.tl.types import InputPeerChannel
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.errors import UserNotParticipant
 
-# Setup Logging agar muncul di Railway
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
+DB_CHANNEL = int(os.getenv("DB_CHANNEL"))
+CHANNEL_URL = os.getenv("CHANNEL_URL")
+
+app = Client(
+    "file-share-bot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
 )
-logger = logging.getLogger(__name__)
 
-API_ID = int(os.environ.get("API_ID"))
-API_HASH = os.environ.get("API_HASH")
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = int(os.environ.get("ADMIN_ID"))
-DB_CHANNEL = int(os.environ.get("DB_CHANNEL"))
-CHANNEL_URL = os.environ.get("CHANNEL_URL")
+db = {}
 
-bot = TelegramClient('sharebot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+def generate_code(length=10):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-def encode_id(msg_id):
-    random_salt = "".join(secrets.choice(string.ascii_letters) for _ in range(5))
-    combined = f"{random_salt}:{msg_id}"
-    return base64.urlsafe_b64encode(combined.encode()).decode().strip("=")
-
-def decode_id(coded_str):
+async def check_force_sub(client, user_id):
     try:
-        decoded = base64.urlsafe_b64decode(coded_str + "==").decode()
-        return int(decoded.split(":")[1])
-    except Exception as e:
-        logger.error(f"Decode Error: {e}")
-        return None
+        await client.get_chat_member(CHANNEL_URL, user_id)
+        return True
+    except UserNotParticipant:
+        return False
+    except:
+        return False
 
-@bot.on(events.NewMessage(pattern='/start'))
-async def start_handler(event):
-    # 1. Force Subscribe Check
-    try:
-        await bot(GetParticipantRequest(DB_CHANNEL, event.sender_id))
-    except UserNotParticipantError:
-        join_button = [
-            [Button.url("Join Channel", CHANNEL_URL)],
-            [Button.url("Coba Lagi", f"https://t.me/{(await bot.get_me()).username}?start={event.text.split(' ')[1] if len(event.text) > 7 else ''}")]
-        ]
-        return await event.respond("⚠️ **AKSES DITOLAK**\nSilakan bergabung ke channel untuk mengambil file.", buttons=join_button)
-    except Exception as e:
-        logger.error(f"Fsub Error: {e}")
-        return await event.respond("Verifikasi member gagal. Pastikan bot adalah admin di channel.")
+@app.on_message(filters.command("start"))
+async def start_command(client, message):
+    args = message.text.split()
 
-    # 2. Ambil File
-    if len(event.text) > 7:
-        coded_id = event.text.split(" ")[1]
-        real_id = decode_id(coded_id)
-        
-        if not real_id:
-            return await event.respond("Link tidak valid.")
-
-        try:
-            # --- PERBAIKAN UTAMA DI SINI ---
-            # Dapatkan entitas channel secara eksplisit agar bot "mengenal" channelnya
-            entity = await bot.get_input_entity(DB_CHANNEL)
-            
-            # Ambil pesan menggunakan entitas yang sudah divalidasi
-            msgs = await bot.get_messages(entity, ids=real_id)
-            
-            if msgs and msgs.media:
-                await bot.send_message(
-                    event.chat_id,
-                    file=msgs.media,
-                    message=msgs.text or "",
-                    protect_content=True # ANTI-SCREENSHOT & ANTI-FORWARD
-                )
-            else:
-                await event.respond("Maaf, file tidak ditemukan di database channel.")
-        except Exception as e:
-            logger.error(f"Gagal mengambil pesan ID {real_id}: {e}")
-            await event.respond(f"Kesalahan sistem saat mengambil file. (ID: {real_id})")
-    else:
-        await event.respond("Bot Aktif! Kirim file ke sini (Admin) untuk buat link unik.")
-
-@bot.on(events.NewMessage)
-async def upload_handler(event):
-    if event.sender_id != ADMIN_ID:
+    if len(args) <= 1:
+        await message.reply_text(
+            "Upload file ke bot buat generate link.",
+            protect_content=True
+        )
         return
 
-    if event.media and not event.text.startswith('/'):
-        try:
-            # Upload ke channel
-            sent_msg = await bot.send_message(DB_CHANNEL, file=event.media, message=event.text or "")
-            
-            # Buat link unik
-            unique_code = encode_id(sent_msg.id)
-            bot_username = (await bot.get_me()).username
-            share_link = f"https://t.me/{bot_username}?start={unique_code}"
-            
-            await event.respond(f"✅ **Berhasil!**\n\nLink Unik (Anti-Screenshot):\n`{share_link}`", link_preview=False)
-        except Exception as e:
-            logger.error(f"Upload Error: {e}")
-            await event.respond("Gagal upload ke channel cloud.")
+    code = args[1]
 
-print("Bot berjalan...")
-bot.run_until_disconnected()
+    if code not in db:
+        await message.reply_text(
+            "Link invalid jir.",
+            protect_content=True
+        )
+        return
+
+    joined = await check_force_sub(client, message.from_user.id)
+
+    if not joined:
+        btn = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "Join Channel",
+                    url=CHANNEL_URL
+                )
+            ]
+        ])
+
+        await message.reply_text(
+            "Join channel dulu baru sok akses file.",
+            reply_markup=btn,
+            protect_content=True
+        )
+        return
+
+    msg_id = db[code]
+
+    await client.copy_message(
+        chat_id=message.chat.id,
+        from_chat_id=DB_CHANNEL,
+        message_id=msg_id,
+        protect_content=True
+    )
+
+@app.on_message(
+    filters.private &
+    (filters.document | filters.video | filters.photo)
+)
+async def upload_handler(client, message):
+
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    copied = await message.copy(
+        DB_CHANNEL
+    )
+
+    code = generate_code()
+
+    db[code] = copied.id
+
+    me = await client.get_me()
+
+    link = f"https://t.me/{me.username}?start={code}"
+
+    await message.reply_text(
+        f"Link generated:\n\n{link}",
+        protect_content=True,
+        disable_web_page_preview=True
+    )
+
+print("BOT RUNNING...")
+app.run()
