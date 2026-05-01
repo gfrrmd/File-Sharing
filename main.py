@@ -24,7 +24,7 @@ def decode(text):
 
 @bot.on(events.NewMessage(pattern='/start'))
 async def start_handler(event):
-    # Cek Force Subscribe
+    # 1. Cek Force Subscribe
     try:
         await bot(GetParticipantRequest(DB_CHANNEL, event.sender_id))
     except UserNotParticipantError:
@@ -33,41 +33,48 @@ async def start_handler(event):
             [Button.url("Coba Lagi", f"https://t.me/{(await bot.get_me()).username}?start={event.text.split(' ')[1] if len(event.text) > 7 else ''}")]
         ]
         return await event.respond("❌ **Akses Ditolak!**\nJoin channel dulu ya.", buttons=join_button)
-    except Exception as e:
-        return await event.respond(f"Error: {e}")
 
-    # Ambil File
+    # 2. Logika Mengambil File
     if len(event.text) > 7:
         coded_id = event.text.split(" ")[1]
         try:
             msg_id = int(decode(coded_id))
-            # Mengirim balik file dari channel ke user
-            await bot.forward_messages(event.chat_id, msg_id, DB_CHANNEL)
-        except:
-            await event.respond("File tidak ditemukan.")
+            
+            # Ambil pesan dari channel database
+            msgs = await bot.get_messages(DB_CHANNEL, ids=msg_id)
+            
+            if msgs and msgs.media:
+                # Mengirim ulang media tanpa label forward + proteksi konten
+                await bot.send_message(
+                    event.chat_id, 
+                    file=msgs.media, 
+                    message=msgs.text, # Mengambil caption asli
+                    protect_content=True # ANTI-FORWARD & ANTI-SCREENSHOT
+                )
+            else:
+                await event.respond("File tidak ditemukan.")
+        except Exception as e:
+            logging.error(f"Error: {e}")
+            await event.respond("Terjadi kesalahan saat mengambil file.")
     else:
-        await event.respond("Kirim file ke saya (Admin Only) untuk dapat link.")
+        await event.respond("Bot Aktif! Kirim file untuk upload (Khusus Admin).")
 
 @bot.on(events.NewMessage)
-async def fast_upload_handler(event):
+async def upload_handler(event):
     # Proteksi Admin
     if event.sender_id != ADMIN_ID:
         return
 
-    # Logika Forward Instan
     if event.media and not event.text.startswith('/'):
-        # Gunakan forward_messages agar instan (server-side telegram)
-        sent_msgs = await bot.forward_messages(DB_CHANNEL, event.message)
-        
-        # Ambil ID dari pesan yang baru saja di-forward ke channel
-        sent_msg = sent_msgs[0] if isinstance(sent_msgs, list) else sent_msgs
+        # Admin upload file ke channel database (agar tersimpan)
+        sent_msg = await bot.send_message(DB_CHANNEL, file=event.media, message=event.text or "")
         
         coded_id = encode(str(sent_msg.id))
         bot_username = (await bot.get_me()).username
         share_link = f"https://t.me/{bot_username}?start={coded_id}"
         
-        await event.respond(f"✅ **Instan Upload Berhasil!**\n\nLink: `{share_link}`", link_preview=False)
+        await event.respond(f"✅ **File Berhasil Disimpan!**\n\nLink (Protected): `{share_link}`", link_preview=False)
 
-print("Bot aktif dengan mode Fast Forward...")
+print("Bot aktif dengan fitur Restricted Content...")
 bot.run_until_disconnected()
-            
+        
