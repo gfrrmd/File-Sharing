@@ -11,45 +11,29 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = int(os.environ.get("ADMIN_ID"))
 DB_CHANNEL = int(os.environ.get("DB_CHANNEL"))
 
-app = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client("file_sharing_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Database sementara untuk menyimpan kode captcha (dalam produksi disarankan pakai Redis/MongoDB)
-# Format: { "kode_captcha": message_id_di_channel }
+# Database sederhana dalam memori
 db_links = {}
 
-def generate_captcha_code(length=8):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+def generate_captcha_style_code(length=10):
+    # Menggunakan kombinasi huruf besar, kecil, dan angka agar mirip captcha
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choices(chars, k=length))
 
-# Handler untuk Admin (Upload Media)
-@app.on_message(filters.private & filters.user(ADMIN_ID) & (filters.document | filters.video | filters.photo))
-async def handle_admin_upload(client, message):
-    # 1. Forward media ke channel database secara diam-diam
-    pushed = await message.copy(DB_CHANNEL)
-    
-    # 2. Buat kode unik ala captcha
-    captcha_code = generate_captcha_code()
-    db_links[captcha_code] = pushed.id
-    
-    # 3. Berikan link kepada Admin
-    bot_user = await client.get_me()
-    share_link = f"https://t.me/{bot_user.username}?start={captcha_code}"
-    
-    await message.reply_text(
-        f"✅ **File Berhasil Disimpan!**\n\nLink: `{share_link}`",
-        disable_web_page_preview=True
-    )
+# ================= USER INTERFACE (NON-ADMIN) =================
 
-# Handler untuk User Klik /start [kode]
 @app.on_message(filters.command("start") & filters.private)
-async def handle_start(client, message):
+async def start_command(client, message):
+    # Jika user klik link (ada argumen start)
     if len(message.command) > 1:
         code = message.command[1]
         msg_id = db_links.get(code)
         
         if msg_id:
             try:
-                # Mengirim ulang file dari channel ke user tanpa header forward
-                # protect_content=True mengunci fitur screenshot/forward
+                # Mengirim media dari cloud ke user
+                # protect_content=True: Mencegah screenshot, save, dan forward
                 await client.copy_message(
                     chat_id=message.chat.id,
                     from_chat_id=DB_CHANNEL,
@@ -57,11 +41,53 @@ async def handle_start(client, message):
                     protect_content=True 
                 )
             except Exception as e:
-                await message.reply_text("Terjadi kesalahan saat mengambil file.")
+                await message.reply_text("❌ Gagal mengambil file. Pastikan bot adalah Admin di Channel Database.")
         else:
-            await message.reply_text("❌ Link tidak valid atau sudah kadaluwarsa.")
+            await message.reply_text("❌ Link kadaluwarsa atau salah.")
+    
+    # Jika user hanya klik start biasa
     else:
-        # Interaksi Non-Admin (Welcome Message)
-        await message.reply_text("Halo! Kirimkan link bot yang valid untuk mendapatkan file.")
+        if message.from_user.id == ADMIN_ID:
+            await message.reply_text(
+                "👋 **Halo Admin!**\n\nAnda bisa mengirim foto, video, atau dokumen ke sini "
+                "untuk diubah menjadi link sharing otomatis."
+            )
+        else:
+            await message.reply_text(
+                "🙏 **Selamat Datang!**\n\nBot ini hanya bisa digunakan jika Anda memiliki "
+                "link file yang sah dari Admin."
+            )
+
+# ================= ADMIN INTERFACE (UPLOAD) =================
+
+# Filter hanya untuk ADMIN_ID dan tipe pesan media
+@app.on_message(filters.private & filters.user(ADMIN_ID) & (filters.document | filters.video | filters.photo | filters.audio))
+async def admin_upload_handler(client, message):
+    try:
+        # 1. Simpan ke Channel Database (Menghapus pengirim asli)
+        stored_msg = await message.copy(DB_CHANNEL)
+        
+        # 2. Generate kode captcha
+        code = generate_captcha_style_code()
+        db_links[code] = stored_msg.id
+        
+        # 3. Berikan link ke admin
+        bot = await client.get_me()
+        link = f"https://t.me/{bot.username}?start={code}"
+        
+        await message.reply_text(
+            f"✅ **Berhasil Disimpan di Cloud!**\n\n"
+            f"🔗 **Link Sharing:**\n`{link}`\n\n"
+            f"⚠️ *File ini diproteksi (Anti-Forward/Anti-Screenshot)*",
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        await message.reply_text(f"❌ Gagal upload: {str(e)}")
+
+# Tolak upload jika bukan admin
+@app.on_message(filters.private & ~filters.user(ADMIN_ID) & (filters.document | filters.video | filters.photo))
+async def non_admin_reject(client, message):
+    await message.reply_text("🚫 **Akses Ditolak.** Anda tidak memiliki izin untuk mengupload file ke bot ini.")
 
 app.run()
+        
