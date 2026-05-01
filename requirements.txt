@@ -1,5 +1,2 @@
 pyrogram
 tgcrypto
-python-dotenv
-motor
-dnspython
