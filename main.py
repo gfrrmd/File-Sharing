@@ -61,7 +61,7 @@ async def start_command(client, message):
 # ================= ADMIN INTERFACE (UPLOAD) =================
 
 # Filter hanya untuk ADMIN_ID dan tipe pesan media
-@app.on_message(filters.private & filters.user(ADMIN_ID) & (filters.document | filters.video | filters.photo | filters.audio))
+@app.on_message(filters.private & filters.user(ADMIN_ID) & ~filters.command(["start", "help"]))
 async def admin_upload_handler(client, message):
     try:
         # 1. Simpan ke Channel Database (Menghapus pengirim asli)
