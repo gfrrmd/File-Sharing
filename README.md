@@ -1,43 +1,44 @@
 # File Sharing Bot
 
-Bot Telegram untuk menyimpan file ke channel database dan membagikannya kembali lewat link khusus.
+Bot Telegram untuk menyimpan file ke channel database dan membagikannya kembali melalui bot.
 
 ## Penjelasan
 
-Project ini digunakan untuk:
+Project ini dipakai untuk:
 - Menyimpan file ke channel Telegram sebagai database
-- Mengelola akses file lewat bot
-- Membagikan file dengan link yang lebih praktis
-- Menjalankan bot secara online di Railway
+- Mengelola file melalui bot Telegram
+- Membagikan file dengan lebih praktis
+- Menjalankan bot secara online menggunakan Railway
 
-## Environment Variables
+## Required Variables
 
-Sebelum menjalankan bot, kamu harus menyiapkan variabel berikut:
+Saat deploy ke Railway, isi variable berikut:
 
-| Variable | Wajib | Keterangan |
-|---|---|---|
-| `API_ID` | Ya | API ID Telegram |
-| `API_HASH` | Ya | API Hash Telegram |
-| `BOT_TOKEN` | Ya | Token bot dari BotFather |
-| `ADMIN_ID` | Ya | User ID Telegram admin utama |
-| `DB_CHANNEL` | Ya | ID channel Telegram untuk menyimpan file |
+| Variable | Keterangan |
+|---|---|
+| `API_ID` | Telegram API ID |
+| `API_HASH` | Telegram API Hash |
+| `BOT_TOKEN` | Token bot dari BotFather |
+| `ADMIN_ID` | User ID Telegram admin/owner bot |
+| `DB_CHANNEL` | ID channel Telegram untuk database file |
 
 ## Yang Dibutuhkan
 
 ### 1. API_ID dan API_HASH
-Ambil dari akun Telegram developer kamu.
+Ambil dari Telegram Developer.
 
 ### 2. BOT_TOKEN
-Buat bot lewat [@BotFather](https://t.me/BotFather), lalu ambil token bot.
+Buat bot lewat [@BotFather](https://t.me/BotFather), lalu salin token bot.
 
 ### 3. ADMIN_ID
-Masukkan user ID Telegram kamu sebagai admin/owner bot.
+Isi dengan user ID Telegram milik admin utama bot.
 
 ### 4. DB_CHANNEL
-Buat channel Telegram untuk penyimpanan file, lalu:
+Buat channel Telegram untuk database file, lalu:
 - Tambahkan bot ke channel
 - Jadikan bot sebagai admin
-- Gunakan ID channel tersebut sebagai `DB_CHANNEL`
+- Ambil ID channel tersebut
+- Masukkan ke `DB_CHANNEL`
 
 ## Cara Menjalankan Secara Lokal
 
