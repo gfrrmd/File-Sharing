@@ -40,10 +40,3 @@ Buat channel Telegram untuk database file, lalu:
 - Ambil ID channel tersebut
 - Masukkan ke `DB_CHANNEL`
 
-## Cara Menjalankan Secara Lokal
-
-```bash
-git clone https://github.com/gfrrmd/File-Sharing.git
-cd File-Sharing
-pip install -r requirements.txt
-python bot.py
