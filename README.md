@@ -26,7 +26,7 @@ Saat deploy ke Railway, isi variabel berikut:
 | `API_HASH` | Telegram API Hash |
 | `BOT_TOKEN` | Token bot dari BotFather |
 | `ADMIN_ID` | User ID Telegram admin/owner bot |
-| `DB_CHANNEL` | ID channel Telegram yang dipakai sebagai database file, biasanya berawalan -1.......... |
+| `DB_CHANNEL` | ID channel Telegram yang dipakai sebagai database file, biasanya berawalan (-1..........) |
 
 ## Yang Dibutuhkan
 
