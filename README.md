@@ -1,4 +1,4 @@
-# File Sharing Bot
+# File Sharing Telegram Bot
 
 Bot Telegram untuk menyimpan file ke channel database dan membagikannya kembali melalui bot dengan lebih mudah.
 
