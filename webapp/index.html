@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>File Sharing Bot</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,163 +10,221 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f0f0f;
-      --surface: #1a1a1a;
-      --surface-2: #242424;
-      --border: rgba(255,255,255,0.08);
-      --text: #f0f0f0;
-      --text-muted: #888;
-      --primary: #2196F3;
-      --primary-hover: #1976D2;
-      --success: #4CAF50;
-      --error: #f44336;
-      --radius: 14px;
-      --radius-sm: 8px;
+      --bg: #0e0e10;
+      --surface: #18181b;
+      --surface-2: #27272a;
+      --surface-3: #3f3f46;
+      --border: rgba(255,255,255,0.07);
+      --border-2: rgba(255,255,255,0.12);
+      --text: #fafafa;
+      --text-muted: #a1a1aa;
+      --text-faint: #52525b;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-glow: rgba(59,130,246,0.15);
+      --success: #22c55e;
+      --success-bg: rgba(34,197,94,0.08);
+      --success-border: rgba(34,197,94,0.25);
+      --error: #f87171;
+      --error-bg: rgba(248,113,113,0.08);
+      --error-border: rgba(248,113,113,0.25);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
+      --transition: 0.18s cubic-bezier(0.16,1,0.3,1);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { height: 100%; }
     body {
       font-family: "Inter", sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 16px;
-      font-size: 15px;
+      min-height: -webkit-fill-available;
+      padding: 16px 14px env(safe-area-inset-bottom, 16px);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
     .header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px; padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
     }
     .header-icon {
       width: 44px; height: 44px;
-      background: linear-gradient(135deg, var(--primary), #1565C0);
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       font-size: 22px;
+      box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+      flex-shrink: 0;
     }
-    .header-title { font-size: 18px; font-weight: 700; }
-    .header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .header-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+    .header-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
     .tabs {
-      display: flex;
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 4px;
-      gap: 4px;
-      margin-bottom: 20px;
+      display: flex; background: var(--surface);
+      border-radius: var(--radius); padding: 4px; gap: 4px;
+      margin-bottom: 18px; border: 1px solid var(--border);
     }
     .tab {
-      flex: 1; padding: 9px;
+      flex: 1; padding: 9px 8px;
       background: transparent; border: none; color: var(--text-muted);
-      border-radius: 10px; font-size: 13px; font-weight: 500;
-      cursor: pointer; transition: all 0.2s;
+      border-radius: 12px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all var(--transition);
+      font-family: "Inter", sans-serif;
     }
     .tab.active {
-      background: var(--surface-2);
-      color: var(--text);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      background: var(--surface-2); color: var(--text);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.4);
     }
     .panel { display: none; }
     .panel.active { display: block; }
     .upload-zone {
-      border: 2px dashed var(--border);
-      border-radius: var(--radius);
-      padding: 40px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 16px;
-      background: var(--surface);
+      border: 1.5px dashed var(--border-2); border-radius: var(--radius);
+      padding: 36px 20px; text-align: center; cursor: pointer;
+      transition: all var(--transition); margin-bottom: 14px;
+      background: var(--surface); position: relative; overflow: hidden;
     }
-    .upload-zone:hover, .upload-zone.dragover {
-      border-color: var(--primary);
-      background: rgba(33,150,243,0.05);
+    .upload-zone::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, var(--primary-glow) 0%, transparent 70%);
+      opacity: 0; transition: opacity var(--transition);
     }
-    .upload-icon { font-size: 40px; margin-bottom: 12px; }
-    .upload-title { font-weight: 600; margin-bottom: 6px; }
-    .upload-sub { font-size: 13px; color: var(--text-muted); }
+    .upload-zone:hover::before, .upload-zone.dragover::before { opacity: 1; }
+    .upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); border-style: solid; }
+    .upload-zone.dragover { transform: scale(1.01); }
+    .upload-icon { font-size: 38px; margin-bottom: 10px; display: block; }
+    .upload-title { font-weight: 600; font-size: 14px; margin-bottom: 5px; }
+    .upload-sub { font-size: 12px; color: var(--text-muted); }
     #fileInput { display: none; }
     .file-preview {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-      border: 1px solid var(--border);
+      background: var(--surface); border-radius: var(--radius);
+      padding: 13px 15px; display: none; align-items: center;
+      gap: 12px; margin-bottom: 14px; border: 1px solid var(--border-2);
+      animation: fadeUp 0.2s ease;
     }
     .file-preview.show { display: flex; }
-    .file-icon { font-size: 28px; }
+    .file-icon-wrap {
+      width: 42px; height: 42px; background: var(--surface-2);
+      border-radius: 10px; display: flex; align-items: center;
+      justify-content: center; font-size: 22px; flex-shrink: 0;
+    }
     .file-info { flex: 1; overflow: hidden; }
-    .file-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-size { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-    .file-remove { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px; }
-    .progress-wrap { display: none; margin-bottom: 16px; }
+    .file-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .file-remove {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 13px;
+      cursor: pointer; padding: 5px 8px; border-radius: var(--radius-xs);
+      transition: all var(--transition); flex-shrink: 0;
+    }
+    .file-remove:hover { color: var(--error); border-color: var(--error-border); }
+    .progress-wrap { display: none; margin-bottom: 14px; }
     .progress-wrap.show { display: block; }
-    .progress-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
-    .progress-bar-bg { background: var(--surface); border-radius: 99px; height: 8px; overflow: hidden; }
-    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), #64B5F6); border-radius: 99px; width: 0%; transition: width 0.3s ease; }
+    .progress-label { font-size: 12px; color: var(--text-muted); margin-bottom: 7px; display: flex; justify-content: space-between; }
+    .progress-bar-bg { background: var(--surface); border-radius: 99px; height: 5px; overflow: hidden; border: 1px solid var(--border); }
+    .progress-bar {
+      height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
+      background-size: 200% 100%; border-radius: 99px; width: 0%;
+      transition: width 0.4s ease; animation: shimmerBar 1.5s ease infinite;
+    }
+    @keyframes shimmerBar { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
     .result-card {
-      background: rgba(76,175,80,0.1);
-      border: 1px solid rgba(76,175,80,0.3);
-      border-radius: var(--radius);
-      padding: 16px;
-      display: none;
-      margin-bottom: 16px;
+      background: var(--success-bg); border: 1px solid var(--success-border);
+      border-radius: var(--radius); padding: 16px; display: none;
+      margin-bottom: 14px; animation: fadeUp 0.25s ease;
     }
     .result-card.show { display: block; }
-    .result-title { font-weight: 600; color: var(--success); margin-bottom: 10px; font-size: 14px; }
+    .result-title { font-weight: 700; color: var(--success); margin-bottom: 12px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
     .link-box {
-      background: var(--surface);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      font-size: 13px;
-      color: var(--primary);
-      word-break: break-all;
-      margin-bottom: 10px;
-      border: 1px solid var(--border);
+      background: var(--surface); border-radius: var(--radius-sm);
+      padding: 10px 13px; font-size: 12px; color: var(--primary);
+      word-break: break-all; margin-bottom: 12px; border: 1px solid var(--border-2);
+      font-family: "SF Mono","Fira Code",monospace; line-height: 1.6;
     }
-    .btn-group { display: flex; gap: 8px; }
-    .btn { flex: 1; padding: 12px 16px; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; }
-    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: #2e2e2e; }
-    .btn-copy { background: var(--surface-2); color: var(--text); border: 1px solid rgba(76,175,80,0.3); }
-    .btn-copy:hover { background: rgba(76,175,80,0.1); }
     .error-card {
-      background: rgba(244,67,54,0.1);
-      border: 1px solid rgba(244,67,54,0.3);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      font-size: 13px;
-      color: #ef9a9a;
-      display: none;
-      margin-bottom: 16px;
+      background: var(--error-bg); border: 1px solid var(--error-border);
+      border-radius: var(--radius); padding: 13px 15px; font-size: 13px;
+      color: var(--error); display: none; margin-bottom: 14px;
     }
     .error-card.show { display: block; }
-    .history-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
-    .history-empty-icon { font-size: 40px; margin-bottom: 12px; }
-    .link-item {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 10px;
-      border: 1px solid var(--border);
+    .btn-group { display: flex; gap: 8px; }
+    .btn {
+      flex: 1; padding: 12px 14px; border: none; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all var(--transition); font-family: "Inter", sans-serif;
     }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); box-shadow: 0 4px 14px rgba(59,130,246,0.35); }
+    .btn-primary:disabled { background: var(--surface-2); color: var(--text-faint); cursor: not-allowed; border: 1px solid var(--border); }
+    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border-2); }
+    .btn-secondary:hover { background: var(--surface-3); }
+    .btn-copy { background: var(--surface-2); color: var(--text); border: 1px solid var(--success-border); }
+    .btn-copy:hover { background: var(--success-bg); color: var(--success); }
+    .upload-btn-wrap { margin-top: 4px; }
+    .history-empty { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+    .history-empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .history-empty-title { font-weight: 600; margin-bottom: 6px; }
+    .history-empty-sub { font-size: 12px; color: var(--text-faint); }
+    .link-item {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 13px 15px; margin-bottom: 10px; border: 1px solid var(--border);
+      transition: border-color var(--transition);
+    }
+    .link-item:hover { border-color: var(--border-2); }
     .link-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .link-item-code { font-size: 12px; color: var(--text-muted); font-family: monospace; }
-    .link-item-url { font-size: 13px; color: var(--primary); word-break: break-all; margin-bottom: 8px; }
-    .btn-copy-sm { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-sm); padding: 5px 10px; font-size: 12px; cursor: pointer; }
-    .btn-copy-sm:hover { color: var(--text); }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
-    .toast.show { opacity: 1; }
-    .loading-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 6px; vertical-align: middle; }
+    .link-item-code {
+      font-size: 11px; color: var(--text-faint);
+      font-family: "SF Mono","Fira Code",monospace;
+      background: var(--surface-2); padding: 3px 7px;
+      border-radius: 99px; border: 1px solid var(--border);
+    }
+    .link-item-url { font-size: 12px; color: var(--primary); word-break: break-all; margin-bottom: 10px; }
+    .btn-copy-sm {
+      background: var(--surface-2); border: 1px solid var(--border-2);
+      color: var(--text-muted); border-radius: var(--radius-xs);
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: "Inter", sans-serif;
+      transition: all var(--transition);
+    }
+    .btn-copy-sm:hover { color: var(--text); border-color: var(--border-2); }
+    .btn-copy-sm.copied { color: var(--success); border-color: var(--success-border); background: var(--success-bg); }
+    .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .history-count { font-size: 11px; color: var(--text-faint); background: var(--surface); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border); }
+    .history-title { font-size: 13px; font-weight: 600; }
+    .toast {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      left: 50%; transform: translateX(-50%) translateY(10px);
+      background: var(--surface-2); color: var(--text);
+      padding: 10px 20px; border-radius: 99px;
+      font-size: 13px; font-weight: 500;
+      opacity: 0; transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none; z-index: 999;
+      border: 1px solid var(--border-2);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .spinner {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.25); border-top-color: white;
+      border-radius: 50%; animation: spin 0.65s linear infinite;
+      margin-right: 7px; vertical-align: middle;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+      background-size: 200% 100%; animation: skshimmer 1.4s ease infinite;
+      border-radius: var(--radius-sm); height: 68px; margin-bottom: 10px;
+    }
+    @keyframes skshimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 99px; }
   </style>
 </head>
 <body>
@@ -174,175 +232,198 @@
     <div class="header-icon">📁</div>
     <div>
       <div class="header-title">File Sharing Bot</div>
-      <div class="header-sub">Upload file & dapatkan link instan</div>
+      <div class="header-sub">Upload file &amp; dapatkan link instan</div>
     </div>
   </div>
   <div class="tabs">
     <button class="tab active" onclick="switchTab('upload')">📤 Upload</button>
-    <button class="tab" onclick="switchTab('history')">🔗 Riwayat Link</button>
+    <button class="tab" onclick="switchTab('history')">🔗 Riwayat</button>
   </div>
   <div class="panel active" id="panel-upload">
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-      <div class="upload-icon">☁️</div>
-      <div class="upload-title">Klik atau drag file ke sini</div>
+      <span class="upload-icon">☁️</span>
+      <div class="upload-title">Klik atau drag &amp; drop file</div>
       <div class="upload-sub">Semua jenis file didukung</div>
     </div>
     <input type="file" id="fileInput" accept="*/*">
     <div class="file-preview" id="filePreview">
-      <div class="file-icon" id="previewIcon">📄</div>
+      <div class="file-icon-wrap"><span id="previewIcon">📄</span></div>
       <div class="file-info">
         <div class="file-name" id="previewName"></div>
         <div class="file-size" id="previewSize"></div>
       </div>
-      <button class="file-remove" onclick="removeFile()">✕</button>
+      <button class="file-remove" onclick="removeFile()" title="Hapus file">✕</button>
     </div>
     <div class="progress-wrap" id="progressWrap">
-      <div class="progress-label" id="progressLabel">Mengupload...</div>
+      <div class="progress-label">
+        <span id="progressLabel">Mengupload...</span>
+        <span id="progressPct">0%</span>
+      </div>
       <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
     </div>
     <div class="error-card" id="errorCard"></div>
     <div class="result-card" id="resultCard">
-      <div class="result-title">✅ Berhasil! File tersimpan.</div>
+      <div class="result-title">✅ Berhasil disimpan!</div>
       <div class="link-box" id="resultLink"></div>
       <div class="btn-group">
         <button class="btn btn-copy" onclick="copyLink()">📋 Copy Link</button>
         <button class="btn btn-secondary" onclick="shareLink()">🔗 Share</button>
       </div>
     </div>
-    <button class="btn btn-primary" id="uploadBtn" onclick="uploadFile()" disabled>📤 Upload & Buat Link</button>
+    <div class="upload-btn-wrap">
+      <button class="btn btn-primary" id="uploadBtn" onclick="uploadFile()" disabled style="width:100%">
+        📤 Upload &amp; Buat Link
+      </button>
+    </div>
   </div>
   <div class="panel" id="panel-history">
+    <div class="history-header">
+      <span class="history-title">Link Tersimpan</span>
+      <span class="history-count" id="historyCount">—</span>
+    </div>
     <div id="historyContent">
-      <div class="history-empty"><div class="history-empty-icon">🔄</div><div>Memuat riwayat...</div></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton" style="opacity:.5"></div>
     </div>
   </div>
   <div class="toast" id="toast"></div>
   <script>
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); tg.expand(); }
-    let selectedFile = null;
-    let currentLink = "";
+    let selectedFile = null, currentLink = '';
     function switchTab(tab) {
-      document.querySelectorAll(".tab").forEach((t, i) => {
-        t.classList.toggle("active", (i === 0 && tab === "upload") || (i === 1 && tab === "history"));
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', (tab === 'upload' && i === 0) || (tab === 'history' && i === 1));
       });
-      document.getElementById("panel-upload").classList.toggle("active", tab === "upload");
-      document.getElementById("panel-history").classList.toggle("active", tab === "history");
-      if (tab === "history") loadHistory();
+      document.getElementById('panel-upload').classList.toggle('active', tab === 'upload');
+      document.getElementById('panel-history').classList.toggle('active', tab === 'history');
+      if (tab === 'history') loadHistory();
     }
-    document.getElementById("fileInput").addEventListener("change", function () {
-      if (this.files[0]) selectFile(this.files[0]);
-    });
-    const zone = document.getElementById("uploadZone");
-    zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("dragover"); });
-    zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
-    zone.addEventListener("drop", e => { e.preventDefault(); zone.classList.remove("dragover"); if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]); });
+    document.getElementById('fileInput').addEventListener('change', function () { if (this.files[0]) selectFile(this.files[0]); });
+    const zone = document.getElementById('uploadZone');
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]); });
     function getFileIcon(name) {
-      const ext = name.split(".").pop().toLowerCase();
-      if (["jpg","jpeg","png","gif","webp","svg"].includes(ext)) return "🖼️";
-      if (["mp4","mkv","avi","mov","webm"].includes(ext)) return "🎬";
-      if (["mp3","wav","flac","ogg","aac"].includes(ext)) return "🎵";
-      if (["pdf"].includes(ext)) return "📕";
-      if (["zip","rar","7z","tar","gz"].includes(ext)) return "🗜️";
-      if (["doc","docx"].includes(ext)) return "📝";
-      if (["xls","xlsx"].includes(ext)) return "📊";
-      return "📄";
+      const ext = name.split('.').pop().toLowerCase();
+      if (['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext)) return '🖼️';
+      if (['mp4','mkv','avi','mov','webm','flv'].includes(ext)) return '🎬';
+      if (['mp3','wav','flac','ogg','aac','m4a'].includes(ext)) return '🎵';
+      if (ext === 'pdf') return '📕';
+      if (['zip','rar','7z','tar','gz'].includes(ext)) return '🗜️';
+      if (['doc','docx'].includes(ext)) return '📝';
+      if (['xls','xlsx','csv'].includes(ext)) return '📊';
+      if (['js','ts','py','html','css','json','php'].includes(ext)) return '💻';
+      if (['apk','ipa'].includes(ext)) return '📱';
+      return '📄';
     }
-    function formatSize(bytes) {
-      if (bytes < 1024) return bytes + " B";
-      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-      return (bytes / 1048576).toFixed(1) + " MB";
+    function formatSize(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+      if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+      return (b/1073741824).toFixed(2) + ' GB';
     }
     function selectFile(file) {
       selectedFile = file;
-      document.getElementById("previewIcon").textContent = getFileIcon(file.name);
-      document.getElementById("previewName").textContent = file.name;
-      document.getElementById("previewSize").textContent = formatSize(file.size);
-      document.getElementById("filePreview").classList.add("show");
-      document.getElementById("uploadBtn").disabled = false;
-      document.getElementById("resultCard").classList.remove("show");
-      document.getElementById("errorCard").classList.remove("show");
+      document.getElementById('previewIcon').textContent = getFileIcon(file.name);
+      document.getElementById('previewName').textContent = file.name;
+      document.getElementById('previewSize').textContent = formatSize(file.size);
+      document.getElementById('filePreview').classList.add('show');
+      document.getElementById('uploadBtn').disabled = false;
+      document.getElementById('resultCard').classList.remove('show');
+      document.getElementById('errorCard').classList.remove('show');
     }
     function removeFile() {
       selectedFile = null;
-      document.getElementById("fileInput").value = "";
-      document.getElementById("filePreview").classList.remove("show");
-      document.getElementById("uploadBtn").disabled = true;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('filePreview').classList.remove('show');
+      document.getElementById('uploadBtn').disabled = true;
     }
     async function uploadFile() {
       if (!selectedFile) return;
-      const btn = document.getElementById("uploadBtn");
-      const progress = document.getElementById("progressWrap");
-      const bar = document.getElementById("progressBar");
-      const label = document.getElementById("progressLabel");
-      const errorCard = document.getElementById("errorCard");
-      const resultCard = document.getElementById("resultCard");
+      const btn = document.getElementById('uploadBtn');
+      const progress = document.getElementById('progressWrap');
+      const bar = document.getElementById('progressBar');
+      const label = document.getElementById('progressLabel');
+      const pct = document.getElementById('progressPct');
+      const errorCard = document.getElementById('errorCard');
+      const resultCard = document.getElementById('resultCard');
       btn.disabled = true;
-      btn.innerHTML = '<span class="loading-spinner"></span> Mengupload...';
-      progress.classList.add("show");
-      errorCard.classList.remove("show");
-      resultCard.classList.remove("show");
+      btn.innerHTML = '<span class="spinner"></span>Mengupload...';
+      progress.classList.add('show');
+      errorCard.classList.remove('show');
+      resultCard.classList.remove('show');
       let prog = 0;
-      const interval = setInterval(() => {
-        prog = Math.min(prog + Math.random() * 15, 85);
-        bar.style.width = prog + "%";
-        label.textContent = `Mengupload... ${Math.round(prog)}%`;
-      }, 300);
+      const iv = setInterval(() => {
+        prog = Math.min(prog + Math.random() * 12, 88);
+        bar.style.width = prog + '%';
+        pct.textContent = Math.round(prog) + '%';
+      }, 280);
       try {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
         const data = await res.json();
-        clearInterval(interval);
-        bar.style.width = "100%";
-        label.textContent = "Selesai! ✅";
+        clearInterval(iv);
+        bar.style.width = '100%'; pct.textContent = '100%'; label.textContent = 'Selesai!';
         await new Promise(r => setTimeout(r, 500));
-        progress.classList.remove("show");
+        progress.classList.remove('show');
         if (data.ok) {
           currentLink = data.link;
-          document.getElementById("resultLink").textContent = data.link;
-          resultCard.classList.add("show");
+          document.getElementById('resultLink').textContent = data.link;
+          resultCard.classList.add('show');
           removeFile();
-          showToast("✅ Link berhasil dibuat!");
-        } else {
-          throw new Error(data.error || "Upload gagal");
-        }
+          showToast('✅ Link berhasil dibuat!');
+        } else throw new Error(data.error || 'Upload gagal');
       } catch (err) {
-        clearInterval(interval);
-        progress.classList.remove("show");
-        bar.style.width = "0%";
-        errorCard.textContent = "❌ Error: " + err.message;
-        errorCard.classList.add("show");
+        clearInterval(iv);
+        progress.classList.remove('show');
+        bar.style.width = '0%';
+        errorCard.textContent = '❌ ' + err.message;
+        errorCard.classList.add('show');
+        showToast('❌ Upload gagal');
       }
       btn.disabled = false;
-      btn.innerHTML = "📤 Upload & Buat Link";
+      btn.innerHTML = '📤 Upload &amp; Buat Link';
     }
-    function copyLink() { if (!currentLink) return; navigator.clipboard.writeText(currentLink).then(() => showToast("📋 Link disalin!")); }
-    function shareLink() { if (!currentLink) return; if (tg) tg.openTelegramLink(currentLink); else navigator.clipboard.writeText(currentLink).then(() => showToast("Link disalin!")); }
+    function copyLink() {
+      if (!currentLink) return;
+      navigator.clipboard.writeText(currentLink).then(() => showToast('📋 Link disalin!')).catch(() => {
+        const el = document.createElement('textarea'); el.value = currentLink;
+        document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+        showToast('📋 Link disalin!');
+      });
+    }
+    function shareLink() { if (!currentLink) return; if (tg) tg.openTelegramLink(currentLink); else copyLink(); }
     async function loadHistory() {
-      const container = document.getElementById("historyContent");
-      container.innerHTML = '<div class="history-empty"><div class="history-empty-icon">🔄</div><div>Memuat...</div></div>';
+      const container = document.getElementById('historyContent');
+      const count = document.getElementById('historyCount');
+      container.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton" style="opacity:.5"></div>';
       try {
-        const res = await fetch("/api/links");
+        const res = await fetch('/api/links');
         const data = await res.json();
-        if (!data.ok || data.links.length === 0) {
-          container.innerHTML = '<div class="history-empty"><div class="history-empty-icon">📭</div><div>Belum ada link yang dibuat</div></div>';
+        if (!data.ok || !data.links || data.links.length === 0) {
+          count.textContent = '0 link';
+          container.innerHTML = '<div class="history-empty"><div class="history-empty-icon">📭</div><div class="history-empty-title">Belum ada link</div><div class="history-empty-sub">Upload file pertama kamu di tab Upload</div></div>';
           return;
         }
-        container.innerHTML = data.links.reverse().map(item => `
-          <div class="link-item">
-            <div class="link-item-top">
-              <span class="link-item-code">Kode: ${item.code}</span>
-              <button class="btn-copy-sm" onclick="copyText('${item.link}', this)">Salin</button>
-            </div>
-            <div class="link-item-url">${item.link}</div>
-          </div>`).join("");
+        const links = [...data.links].reverse();
+        count.textContent = links.length + ' link';
+        container.innerHTML = links.map(item => `<div class="link-item"><div class="link-item-top"><span class="link-item-code">${item.code}</span><button class="btn-copy-sm" onclick="copyText('${item.link}', this)">Salin</button></div><div class="link-item-url">${item.link}</div></div>`).join('');
       } catch (e) {
-        container.innerHTML = '<div class="history-empty"><div class="history-empty-icon">❌</div><div>Gagal memuat riwayat</div></div>';
+        count.textContent = 'Error';
+        container.innerHTML = '<div class="history-empty"><div class="history-empty-icon">⚠️</div><div class="history-empty-title">Gagal memuat riwayat</div><div class="history-empty-sub">Cek koneksi dan coba lagi</div></div>';
       }
     }
-    function copyText(text, btn) { navigator.clipboard.writeText(text).then(() => { btn.textContent = "✓ Disalin"; setTimeout(() => btn.textContent = "Salin", 2000); }); }
-    function showToast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2500); }
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => { btn.textContent = '✓ Disalin'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Salin'; btn.classList.remove('copied'); }, 2000); }).catch(() => showToast('Gagal menyalin'));
+    }
+    let toastTimer;
+    function showToast(msg) {
+      const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+    }
   </script>
 </body>
 </html>
